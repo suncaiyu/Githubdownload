@@ -44,39 +44,55 @@ void HttpManager::DownLoadFile(const QUrl &url, const QString &name, int size)
             qDebug() << ("has error Code:" + QString::number(r->error()));
             return;
         }
+        qDebug() << "write";
         mDownLoadFile->write(r->readAll());
     });
-    connect(replay, &QNetworkReply::downloadProgress, this, [this](qint64 cur, qint64 all){
+    connect(replay, &QNetworkReply::downloadProgress, this, [this, mDownLoadFile, size](qint64 cur, qint64 all){
         QNetworkReply *r = qobject_cast<QNetworkReply *>(sender());
         if (r->error() != QNetworkReply::NoError) {
             qDebug() << ("has error Code:" + QString::number(r->error()));
             return;
         }
         DownLoadProcessSignal(all, cur);
+        if (all == cur) {
+            mDownLoadFile->close();
+            if (mDownLoadFile->size() == 0) {
+                qDebug() << ("文件大小是0");
+                mDownLoadFile->remove();
+                return;
+            }
+            if (mDownLoadFile->size() != size) {
+                qDebug() << ("文件大小不对");
+                mDownLoadFile->remove();
+                return;
+            }
+        }
     });
-    connect(replay, &QNetworkReply::finished, this, [this, mDownLoadFile, name, size]()mutable{
-        QNetworkReply *r = qobject_cast<QNetworkReply *>(sender());
-        if (r->error() != QNetworkReply::NoError) {
-            qDebug() << ("has error Code:" + QString::number(r->error()));
-            mDownLoadFile->remove();
-            return;
-        }
-        mDownLoadFile->close();
-        if (mDownLoadFile->size() == 0) {
-            qDebug() << ("文件大小是0");
-            mDownLoadFile->remove();
-            return;
-        }
-        if (mDownLoadFile->size() != size) {
-            qDebug() << ("文件大小不对");
-            mDownLoadFile->remove();
-            return;
-        }
+//    connect(replay, &QNetworkReply::finished, this, [this, mDownLoadFile, name, size](){
+//        QNetworkReply *r = qobject_cast<QNetworkReply *>(sender());
+//        if (r->error() != QNetworkReply::NoError) {
+//            qDebug() << ("has error Code:" + QString::number(r->error()));
+//            mDownLoadFile->remove();
+//            return;
+//        }
+//        mDownLoadFile->close();
+//        if (mDownLoadFile->size() == 0) {
+//            qDebug() << ("文件大小是0");
+//            mDownLoadFile->remove();
+//            return;
+//        }
+//        if (mDownLoadFile->size() != size) {
+//            qDebug() << ("文件大小不对");
+//            mDownLoadFile->remove();
+//            return;
+//        }
+//        qDebug() << "download finished";
+//        mDownLoadFile->rename(qApp->applicationDirPath() + "/download/" + name);
+//        delete mDownLoadFile;
+//    });
+    connect(mDownloadManager, &QNetworkAccessManager::finished, [this, mDownloadManager, mDownLoadFile, name](){
         mDownLoadFile->rename(qApp->applicationDirPath() + "/download/" + name);
         delete mDownLoadFile;
-        mDownLoadFile = nullptr;
-    });
-    connect(mDownloadManager, &QNetworkAccessManager::finished, [this, mDownloadManager]()mutable{
         mDownloadManager->deleteLater();
         DownLoadFinishedSignal();
     });
