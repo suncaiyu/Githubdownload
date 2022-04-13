@@ -51,8 +51,8 @@ QWidget* TreeDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem&
             qDebug() << item->data(0);
             HttpManager *mHttp = new HttpManager();
             qDebug() << mHttp;
-            connect(mHttp, &HttpManager::DownLoadProcessSignal, this, [d](int all, int cur){
-                d->SetValue(cur, all);
+            connect(mHttp, &HttpManager::DownLoadProcessSignal, this, [d, item](int all, int cur){
+                d->SetValue(cur, item->data(4).toInt());
             });
             connect(mHttp, &HttpManager::DownLoadFinishedSignal, this, [mHttp](){
                 qDebug() << mHttp;
